@@ -246,9 +246,10 @@ class Gene:
         """Print statistics to a file."""
         if append:
             with open(output_file, 'a') as f:
+                f.write(f'{self.name}\t{self.chromosome}\t{transcriptID}\t')
                 for K in self.statistics[transcriptID].keys():
                     for L in self.statistics[transcriptID][K].values():
-                        f.write(f'{transcriptID}\t{L}\t')
+                        f.write(f'{L}\t')
                 f.write('\n')
         else:
             with open(output_file, 'w') as f:
