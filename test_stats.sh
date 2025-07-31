@@ -9,5 +9,6 @@ for gene in AGAP007033 AGAP006184 AGAP006914 AGAP007035 AGAP007036 AGAP010489 AG
         --vcf $vcf \
         --gene $gene \
         --annotation $annotation \
-        --fasta $fasta
+        --fasta $fasta \
+        --output "ag_gene_stats.tsv"
 done
