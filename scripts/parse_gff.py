@@ -2,9 +2,9 @@ import gffutils
 import argparse
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Process GFF files to TSV format with relevant features")
-    parser.add_argument("input_file", help="Path to the input GFF file")
-    parser.add_argument("output_file", help="Path to save GFF database to")
+    parser = argparse.ArgumentParser(description="Create GFF database from input GFF file")
+    parser.add_argument("--input_file", help="Path to the input GFF file")
+    parser.add_argument("--output_file", help="Path to save GFF database to")
     return parser.parse_args()
 
 def main():
