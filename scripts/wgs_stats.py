@@ -95,7 +95,7 @@ codontab = {
 }
 
 class Gene:
-    def __init__(self, name, chromosome, start, end):
+    def __init__(self, name, chromosome=None, start=None, end=None):
         self.name = name
         self.chromosome = chromosome
         self.start = start
@@ -139,7 +139,7 @@ class Gene:
         self.transcripts[transcript.id] = coding_seq
         return coding_seq
     
-    def fetch_variation(self, vcf_file, annotation, fasta):
+    def fetch_variation(self, vcf_file, annotation, fasta, protein_fasta=None):
         """Create arrays of genotype variation data, stored in the self.transcripts dictionary as
         'sequences'."""
         # Load the VCF file
@@ -148,7 +148,7 @@ class Gene:
         if not self.transcripts:
             # fetch transcripts if not already fetched
             print(f"Fetching transcripts for gene {self.name} on chromosome {chr}")
-            self._fetch_gene_transcripts(annotation=annotation)
+            self.fetch_gene_transcripts(annotation=annotation)
         transcripts = self.transcripts.values()
         for transcript in transcripts:
             if type(transcript) is not dict:
@@ -157,7 +157,7 @@ class Gene:
                 coding_seq = self.fetch_coding_sequence(transcript, annotation, fasta)
                 self.transcripts[transcript.id] = coding_seq
             cds_seq, cds_seq_array = get_nucleotide_sequences(callset, coding_seq)
-            wt_AA_seq, aa_array = get_aa_sequences(cds_seq_array, coding_seq)
+            wt_AA_seq, aa_array = get_aa_sequences(cds_seq_array, cds_seq, ID=transcript.id, fasta_check=protein_fasta)
             sitesval = mean_ss_sites(cds_seq_array, wt_AA_seq)
             synonymous_array, nonsynonymous_array = identify_ss_ns_sites(cds_seq_array, cds_seq, aa_array, wt_AA_seq)
             self.transcripts[transcript.id]['sequences'] = {
@@ -190,8 +190,8 @@ class Gene:
                                 len(self.transcripts[transcriptID]['sequences']['positions'])),
             'cds_pi': calc_pi(cds_seq_array, len(self.transcripts[transcriptID]['sequences']['wt_nt_seq'])),
             'aa_pi': calc_pi(aa_array, self.transcripts[transcriptID]['mean_nssites']),
-            'ss_pi': calc_pi(ss_array, self.transcripts[transcriptID]['mean_sssites']),
-            'ns_pi': calc_pi(ns_array, self.transcripts[transcriptID]['mean_nssites']),
+            'ss_pi': calc_pi(ss_array, self.transcripts[transcriptID]['mean_sssites']) if ss_array is not None else 0,
+            'ns_pi': calc_pi(ns_array, self.transcripts[transcriptID]['mean_nssites']) if ns_array is not None else 0,
             }
         else:
             self.statistics[transcriptID]['pi'] = {
@@ -207,8 +207,8 @@ class Gene:
                                 len(self.transcripts[transcriptID]['sequences']['positions'])),
             'cds_theta': calc_theta(cds_seq_array, len(self.transcripts[transcriptID]['sequences']['wt_nt_seq'])),
             'aa_theta': calc_theta(aa_array, self.transcripts[transcriptID]['mean_nssites']),
-            'ss_theta': calc_theta(ss_array, self.transcripts[transcriptID]['mean_sssites']),
-            'ns_theta': calc_theta(ns_array, self.transcripts[transcriptID]['mean_nssites'])
+            'ss_theta': calc_theta(ss_array, self.transcripts[transcriptID]['mean_sssites']) if ss_array is not None else 0,
+            'ns_theta': calc_theta(ns_array, self.transcripts[transcriptID]['mean_nssites']) if ns_array is not None else 0
             }
         else:
             self.statistics[transcriptID]['theta'] = {
@@ -224,8 +224,8 @@ class Gene:
                                 len(self.transcripts[transcriptID]['sequences']['positions'])),
             'cds_d': calc_taj(cds_seq_array, len(self.transcripts[transcriptID]['sequences']['wt_nt_seq'])),
             'aa_d': calc_taj(aa_array, self.transcripts[transcriptID]['mean_nssites']),
-            'ss_d': calc_taj(ss_array, self.transcripts[transcriptID]['mean_sssites']),
-            'ns_d': calc_taj(ns_array, self.transcripts[transcriptID]['mean_nssites'])
+            'ss_d': calc_taj(ss_array, self.transcripts[transcriptID]['mean_sssites']) if ss_array is not None else 0,
+            'ns_d': calc_taj(ns_array, self.transcripts[transcriptID]['mean_nssites']) if ns_array is not None else 0
         }
         else:
             self.statistics[transcriptID]['tajD'] = {
@@ -273,14 +273,17 @@ class Gene:
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Calculate popgen statistics for a gene in a VCF file")
-    parser.add_argument('--vcf', type=str, help='Path to the VCF file')
-    parser.add_argument('--annotation', help='Path to genome annotation DB (created by parse_gff.py)', type=str, default=None)
-    parser.add_argument('--fasta', type=str, help='Path to the reference genome FASTA file')
-    parser.add_argument('--gene', type=str, help='Gene name to analyze')
-    parser.add_argument('--chromosome', type=str, help='Chromosome of the gene')
-    parser.add_argument('--start', type=int, help='Start position of the gene')
-    parser.add_argument('--end', type=int, help='End position of the gene')
-    parser.add_argument('--output', type=str, default='stats_output.txt', help='Output file for statistics')
+    parser.add_argument('--gene', type=str, help='Gene name to analyze', required=True)
+    parser.add_argument('--transcript', type=str, help='Transcript ID from gene to analyze (optional)', default=None)
+    parser.add_argument('--vcf', type=str, help='Path to the VCF file', required=True)
+    parser.add_argument('--annotation', help='Path to genome annotation DB (created by parse_gff.py)', type=str, required=True)
+    parser.add_argument('--fasta', type=str, help='Path to the reference genome FASTA file', required=True)
+    parser.add_argument('--proteinfasta', type=str, help='Path to the reference protein FASTA file (for checking amino acid sequences)', default=None)
+    parser.add_argument('--chromosome', type=str, help='Chromosome of the gene', default=None)
+    parser.add_argument('--start', type=int, help='Start position of the gene', default=None)
+    parser.add_argument('--end', type=int, help='End position of the gene', default=None)
+    parser.add_argument('--output', type=str, default=None, help='Save statistics to this file if provided. If file exists, append to it, if not, create a new file.')
+    parser.add_argument('--print', default=True, action='store_true', help='Print statistics to the console. Default is True.')
     return parser.parse_args()
 
 ##########################################################
@@ -369,13 +372,13 @@ def get_nucleotide_sequences(callset, coding_seq):
 
     return cds_seq, cds_seq_array
 
-def get_aa_sequences(cds_seq_array, coding_seq, fasta_check=None):
+def get_aa_sequences(cds_seq_array, cds_seq, ID=None, fasta_check=None):
     """Translate array of coding sequences into protein sequences."""
-    wt_AA_seq = np.fromiter(codonalign.codonseq.CodonSeq("".join(coding_seq['cds_seq'])).translate(), dtype='U1')  # wild-type coding sequence
+    wt_AA_seq = np.fromiter(codonalign.codonseq.CodonSeq("".join(cds_seq)).translate(), dtype='U1')  # wild-type coding sequence
     aa_array = np.apply_along_axis(lambda x: np.fromiter(codonalign.codonseq.CodonSeq("".join(x)).translate(), dtype='U1'), 0, cds_seq_array) # array of AA sequences (translated)
     if fasta_check:
         pdct = SeqIO.index(fasta_check, 'fasta')
-        assert(np.all(np.fromiter(pdct[coding_seq['id'].replace('R','P')].seq, dtype='U1') == wt_AA_seq[:-1]))
+        assert(np.all(np.fromiter(pdct[ID.replace('R','P')].seq, dtype='U1') == wt_AA_seq[:-1]))
     return wt_AA_seq, aa_array
 
 def identify_ss_ns_sites(cds_seq_array, cds_seq, aa_array, wt_AA_seq):
@@ -413,7 +416,10 @@ def convert_to_binaryarray(sequence_array, wt_sequence):
     sequence_array = allel.GenotypeArray(sequence_array)
     nonvariant_mask = sequence_array.count_hom_ref(axis=1) < sequence_array.shape[1]
     sequence_array = sequence_array[nonvariant_mask]
-    return sequence_array
+    if len(sequence_array) == 0:
+        return None
+    else:
+        return sequence_array
 
 ##################################################################
 # Functions for calculating statistics
@@ -501,15 +507,30 @@ def main():
     GENE.fetch_variation(
         vcf_file=args.vcf.replace('CHROMOSOME', GENE.chromosome.split('_')[-1]),
         annotation=args.annotation,
-        fasta=args.fasta
+        fasta=args.fasta,
+        protein_fasta=args.proteinfasta
     )
-    for K in GENE.transcripts.keys():
-        GENE.calculate_statistics(transcriptID=K)  # calculate statistics for each transcript
-        if os.path.exists(args.output):
-            GENE.print_to_df(transcriptID=K, output_file=args.output, append=True)
-        else:
-            GENE.print_to_df(transcriptID=K, output_file=args.output, append=False)
-        print(f"Statistics for transcript {K} of gene {GENE.name} written to {args.output}")
+    if args.transcript:
+        if args.transcript not in GENE.transcripts:
+            raise ValueError(f"Transcript {args.transcript} not found in gene {GENE.name}. Available transcripts: {list(GENE.transcripts.keys())}")
+        GENE.calculate_statistics(transcriptID=args.transcript)  # calculate statistics for the specified transcript
+        if args.output:
+            if os.path.exists(args.output):
+                GENE.print_to_df(transcriptID=args.transcript, output_file=args.output, append=True)
+            else:
+                GENE.print_to_df(transcriptID=args.transcript, output_file=args.output, append=False)
+        if args.print:
+            print(f"Statistics for transcript {args.transcript} of gene {GENE.name} written to {args.output}")
+    else:
+        for K in GENE.transcripts.keys():
+            GENE.calculate_statistics(transcriptID=K)  # calculate statistics for each transcript
+            if args.output:
+                if os.path.exists(args.output):
+                    GENE.print_to_df(transcriptID=K, output_file=args.output, append=True)
+                else:
+                    GENE.print_to_df(transcriptID=K, output_file=args.output, append=False)
+            if args.print:
+                print(f"Statistics for transcript {K} of gene {GENE.name} written to {args.output}")
 
 
 if __name__ == "__main__":
