@@ -1,6 +1,7 @@
 #!/bin/bash
 
-vcf="/sietch_colab/data_share/Ag1000G/Ag3.0/vcf/phased_vcf/gamb_colu_arab/ag3_gamb1470_colu507_arab368.CHROMOSOME.phased.recode.vcf.gz"
+vcf="/sietch_colab/data_share/Ag1000G/Ag3.0/vcf/phased_vcf/gamb/gamb.CHROMOSOME.phased.n1470.derived.vcf.gz"
+#vcf="/sietch_colab/data_share/Ag1000G/Ag3.0/vcf/phased_vcf/gamb_colu_arab/ag3_gamb1470_colu507_arab368.CHROMOSOME.phased.recode.vcf.gz"
 annotation="data/VectorBase-68_AgambiaePest.db"
 fasta="data/VectorBase-68_AgambiaePEST_Genome.fasta"
 samples=$(echo $(cat "/sietch_colab/data_share/Ag1000G/Ag3.0/vcf/sample_logs/gamb_inds.n1470.keep.txt"))
