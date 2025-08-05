@@ -139,12 +139,12 @@ class Gene:
         self.transcripts[transcript.id] = coding_seq
         return coding_seq
     
-    def fetch_variation(self, vcf_file, annotation, fasta, protein_fasta=None):
+    def fetch_variation(self, vcf_file, annotation, fasta, protein_fasta=None, samples=None):
         """Create arrays of genotype variation data, stored in the self.transcripts dictionary as
         'sequences'."""
         # Load the VCF file
         chr = self.chromosome.split('_')[-1] # remove 'chr' prefix if present
-        callset = allel.read_vcf(vcf_file, region=f'{chr}:{self.start}-{self.end}')
+        callset = allel.read_vcf(vcf_file, region=f'{chr}:{self.start}-{self.end}', samples=samples)
         if not self.transcripts:
             # fetch transcripts if not already fetched
             print(f"Fetching transcripts for gene {self.name} on chromosome {chr}")
@@ -279,6 +279,7 @@ def parse_args():
     parser.add_argument('--annotation', help='Path to genome annotation DB (created by parse_gff.py)', type=str, required=True)
     parser.add_argument('--fasta', type=str, help='Path to the reference genome FASTA file', required=True)
     parser.add_argument('--proteinfasta', type=str, help='Path to the reference protein FASTA file (for checking amino acid sequences)', default=None)
+    parser.add_argument('--samples', nargs='*', type=str, help='List of sample names to include from the VCF file (optional)', default=None)
     parser.add_argument('--chromosome', type=str, help='Chromosome of the gene', default=None)
     parser.add_argument('--start', type=int, help='Start position of the gene', default=None)
     parser.add_argument('--end', type=int, help='End position of the gene', default=None)
@@ -508,7 +509,8 @@ def main():
         vcf_file=args.vcf.replace('CHROMOSOME', GENE.chromosome.split('_')[-1]),
         annotation=args.annotation,
         fasta=args.fasta,
-        protein_fasta=args.proteinfasta
+        protein_fasta=args.proteinfasta,
+        samples=args.samples
     )
     if args.transcript:
         if args.transcript not in GENE.transcripts:
