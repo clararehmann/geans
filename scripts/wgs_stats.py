@@ -139,12 +139,19 @@ class Gene:
         self.transcripts[transcript.id] = coding_seq
         return coding_seq
     
-    def fetch_variation(self, vcf_file, annotation, fasta, protein_fasta=None, samples=None):
+    def fetch_variation(self, vcf_file, annotation, fasta, protein_fasta=None, samples=None, filter=None):
         """Create arrays of genotype variation data, stored in the self.transcripts dictionary as
         'sequences'."""
         # Load the VCF file
         chr = self.chromosome.split('_')[-1] # remove 'chr' prefix if present
         callset = allel.read_vcf(vcf_file, region=f'{chr}:{self.start}-{self.end}', samples=samples)
+        if filter:
+            # Load the filter VCF file and apply it to the callset
+            filter_callset = allel.read_vcf(filter, region=f'{chr}:{self.start}-{self.end}', samples=samples)
+            keeppos = np.isin(callset['variants/POS'], filter_callset['variants/POS'])
+            for key in callset.keys():
+                if key.startswith('variants/') or key.startswith('calldata/'):
+                    callset[key] = callset[key][keeppos]
         if not self.transcripts:
             # fetch transcripts if not already fetched
             print(f"Fetching transcripts for gene {self.name} on chromosome {chr}")
@@ -276,6 +283,7 @@ def parse_args():
     parser.add_argument('--gene', type=str, help='Gene name to analyze', required=True)
     parser.add_argument('--transcript', type=str, help='Transcript ID from gene to analyze (optional)', default=None)
     parser.add_argument('--vcf', type=str, help='Path to the VCF file', required=True)
+    parser.add_argument('--filter', type=str, help='Path to the filter VCF file (optional)', default=None)
     parser.add_argument('--annotation', help='Path to genome annotation DB (created by parse_gff.py)', type=str, required=True)
     parser.add_argument('--fasta', type=str, help='Path to the reference genome FASTA file', required=True)
     parser.add_argument('--proteinfasta', type=str, help='Path to the reference protein FASTA file (for checking amino acid sequences)', default=None)
@@ -506,11 +514,12 @@ def main():
     GENE.fetch_gene_coordinates(annotation=args.annotation)
     GENE.fetch_gene_transcripts(annotation=args.annotation)
     GENE.fetch_variation(
-        vcf_file=args.vcf.replace('CHROMOSOME', GENE.chromosome.split('_')[-1]),
+        vcf_file=args.vcf,
         annotation=args.annotation,
         fasta=args.fasta,
         protein_fasta=args.proteinfasta,
-        samples=args.samples
+        samples=args.samples,
+        filter=args.filter
     )
     if args.transcript:
         if args.transcript not in GENE.transcripts:
