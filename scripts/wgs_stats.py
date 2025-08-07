@@ -461,10 +461,10 @@ def calc_theta(sequence_array, nsites):
     # calculate absolute value
     theta_hat_w_abs = S / a1
     # calculate value per base
-    theta_hat_w = theta_hat_w_abs / nsites
+    theta_hat_w = theta_hat_w_abs / nsites if nsites > 0 else 0
     return theta_hat_w
 
-def calc_taj(sequence_array, nsites, min_sites=2):
+def calc_taj(sequence_array, nsites, min_sites=3):
     """Manually calculate Tajima's D."""
     # stolen from scikit-allel
     ac = sequence_array.count_alleles()
@@ -498,7 +498,7 @@ def calc_taj(sequence_array, nsites, min_sites=2):
     e2 = c2 / (a1**2 + a2)
     d_stdev = np.sqrt((e1 * S) + (e2 * S * (S - 1)))
     # finally calculate Tajima's D
-    D = d / d_stdev
+    D = d / d_stdev if d_stdev > 0 else np.nan
 
     return D
     
