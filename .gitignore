@@ -1,5 +1,7 @@
 # Data directories
 data/
+slurm_logs/
+out/
 
 # Python
 __pycache__/
