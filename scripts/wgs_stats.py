@@ -139,12 +139,19 @@ class Gene:
         self.transcripts[transcript.id] = coding_seq
         return coding_seq
     
-    def fetch_variation(self, vcf_file, annotation, fasta, protein_fasta=None):
+    def fetch_variation(self, vcf_file, annotation, fasta, protein_fasta=None, samples=None, filter=None):
         """Create arrays of genotype variation data, stored in the self.transcripts dictionary as
         'sequences'."""
         # Load the VCF file
         chr = self.chromosome.split('_')[-1] # remove 'chr' prefix if present
-        callset = allel.read_vcf(vcf_file, region=f'{chr}:{self.start}-{self.end}')
+        callset = allel.read_vcf(vcf_file, region=f'{chr}:{self.start}-{self.end}', samples=samples)
+        if filter:
+            # Load the filter VCF file and apply it to the callset
+            filter_callset = allel.read_vcf(filter, region=f'{chr}:{self.start}-{self.end}', samples=samples)
+            keeppos = np.isin(callset['variants/POS'], filter_callset['variants/POS'])
+            for key in callset.keys():
+                if key.startswith('variants/') or key.startswith('calldata/'):
+                    callset[key] = callset[key][keeppos]
         if not self.transcripts:
             # fetch transcripts if not already fetched
             print(f"Fetching transcripts for gene {self.name} on chromosome {chr}")
@@ -276,9 +283,11 @@ def parse_args():
     parser.add_argument('--gene', type=str, help='Gene name to analyze', required=True)
     parser.add_argument('--transcript', type=str, help='Transcript ID from gene to analyze (optional)', default=None)
     parser.add_argument('--vcf', type=str, help='Path to the VCF file', required=True)
+    parser.add_argument('--filter', type=str, help='Path to the filter VCF file (optional)', default=None)
     parser.add_argument('--annotation', help='Path to genome annotation DB (created by parse_gff.py)', type=str, required=True)
     parser.add_argument('--fasta', type=str, help='Path to the reference genome FASTA file', required=True)
     parser.add_argument('--proteinfasta', type=str, help='Path to the reference protein FASTA file (for checking amino acid sequences)', default=None)
+    parser.add_argument('--samples', nargs='*', type=str, help='List of sample names to include from the VCF file (optional)', default=None)
     parser.add_argument('--chromosome', type=str, help='Chromosome of the gene', default=None)
     parser.add_argument('--start', type=int, help='Start position of the gene', default=None)
     parser.add_argument('--end', type=int, help='End position of the gene', default=None)
@@ -427,7 +436,9 @@ def convert_to_binaryarray(sequence_array, wt_sequence):
 
 def calc_pi(sequence_array, nsites):
     """Calculate nucleotide diversity (pi) for a given sequence array."""
-    # manually calculate pi 
+    # manually calculate pi, stolen from scikit-allel
+    if sequence_array is None or len(sequence_array) == 0:
+        return 0
     ac = sequence_array.count_alleles()
     an = np.sum(ac, axis=1)
     n_pairs = an * (an - 1) / 2
@@ -442,6 +453,8 @@ def calc_theta(sequence_array, nsites):
     """Calculate Watterson's theta (theta hat per base) for a given sequence array."""
     # manually calculate Watterson's estimator (theta hat per base)
     # stolen from scikit-allel
+    if sequence_array is None or len(sequence_array) == 0:
+        return 0
     ac = sequence_array.count_alleles()
     # count segregating variants
     S = ac.count_segregating()
@@ -452,12 +465,14 @@ def calc_theta(sequence_array, nsites):
     # calculate absolute value
     theta_hat_w_abs = S / a1
     # calculate value per base
-    theta_hat_w = theta_hat_w_abs / nsites
+    theta_hat_w = theta_hat_w_abs / nsites if nsites > 0 else 0
     return theta_hat_w
 
-def calc_taj(sequence_array, nsites, min_sites=2):
+def calc_taj(sequence_array, nsites, min_sites=3):
     """Manually calculate Tajima's D."""
     # stolen from scikit-allel
+    if sequence_array is None or len(sequence_array) == 0:
+        return 0
     ac = sequence_array.count_alleles()
     S = ac.count_segregating()
     if S < min_sites:
@@ -489,7 +504,7 @@ def calc_taj(sequence_array, nsites, min_sites=2):
     e2 = c2 / (a1**2 + a2)
     d_stdev = np.sqrt((e1 * S) + (e2 * S * (S - 1)))
     # finally calculate Tajima's D
-    D = d / d_stdev
+    D = d / d_stdev if d_stdev > 0 else np.nan
 
     return D
     
@@ -505,10 +520,12 @@ def main():
     GENE.fetch_gene_coordinates(annotation=args.annotation)
     GENE.fetch_gene_transcripts(annotation=args.annotation)
     GENE.fetch_variation(
-        vcf_file=args.vcf.replace('CHROMOSOME', GENE.chromosome.split('_')[-1]),
+        vcf_file=args.vcf,
         annotation=args.annotation,
         fasta=args.fasta,
-        protein_fasta=args.proteinfasta
+        protein_fasta=args.proteinfasta,
+        samples=args.samples,
+        filter=args.filter
     )
     if args.transcript:
         if args.transcript not in GENE.transcripts:
