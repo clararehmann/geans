@@ -436,7 +436,9 @@ def convert_to_binaryarray(sequence_array, wt_sequence):
 
 def calc_pi(sequence_array, nsites):
     """Calculate nucleotide diversity (pi) for a given sequence array."""
-    # manually calculate pi 
+    # manually calculate pi, stolen from scikit-allel
+    if sequence_array is None or len(sequence_array) == 0:
+        return 0
     ac = sequence_array.count_alleles()
     an = np.sum(ac, axis=1)
     n_pairs = an * (an - 1) / 2
@@ -451,6 +453,8 @@ def calc_theta(sequence_array, nsites):
     """Calculate Watterson's theta (theta hat per base) for a given sequence array."""
     # manually calculate Watterson's estimator (theta hat per base)
     # stolen from scikit-allel
+    if sequence_array is None or len(sequence_array) == 0:
+        return 0
     ac = sequence_array.count_alleles()
     # count segregating variants
     S = ac.count_segregating()
@@ -467,6 +471,8 @@ def calc_theta(sequence_array, nsites):
 def calc_taj(sequence_array, nsites, min_sites=3):
     """Manually calculate Tajima's D."""
     # stolen from scikit-allel
+    if sequence_array is None or len(sequence_array) == 0:
+        return 0
     ac = sequence_array.count_alleles()
     S = ac.count_segregating()
     if S < min_sites:
