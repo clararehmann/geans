@@ -439,15 +439,16 @@ def calc_pi(sequence_array, nsites):
     # manually calculate pi, stolen from scikit-allel
     if sequence_array is None or len(sequence_array) == 0:
         return 0
-    ac = sequence_array.count_alleles()
-    an = np.sum(ac, axis=1)
-    n_pairs = an * (an - 1) / 2
-    n_same = np.sum(ac * (ac - 1) / 2, axis=1) 
-    n_diff = n_pairs - n_same
-    mpd = n_diff / n_pairs
-    mpd_sum = np.sum(mpd)
-    pi = mpd_sum / nsites if nsites > 0 else 0
-    return pi
+    else:
+        ac = sequence_array.count_alleles()
+        an = np.sum(ac, axis=1)
+        n_pairs = an * (an - 1) / 2
+        n_same = np.sum(ac * (ac - 1) / 2, axis=1) 
+        n_diff = n_pairs - n_same
+        mpd = n_diff / n_pairs
+        mpd_sum = np.sum(mpd)
+        pi = mpd_sum / nsites if nsites > 0 else 0
+        return pi
 
 def calc_theta(sequence_array, nsites):
     """Calculate Watterson's theta (theta hat per base) for a given sequence array."""
@@ -455,18 +456,19 @@ def calc_theta(sequence_array, nsites):
     # stolen from scikit-allel
     if sequence_array is None or len(sequence_array) == 0:
         return 0
-    ac = sequence_array.count_alleles()
-    # count segregating variants
-    S = ac.count_segregating()
-    # assume number of chromosomes sampled is constant for all variants
-    n = ac.sum(axis=1).max()
-    # (n-1)th harmonic number
-    a1 = np.sum(1 / np.arange(1, n))
-    # calculate absolute value
-    theta_hat_w_abs = S / a1
-    # calculate value per base
-    theta_hat_w = theta_hat_w_abs / nsites if nsites > 0 else 0
-    return theta_hat_w
+    else:
+        ac = sequence_array.count_alleles()
+        # count segregating variants
+        S = ac.count_segregating()
+        # assume number of chromosomes sampled is constant for all variants
+        n = ac.sum(axis=1).max()
+        # (n-1)th harmonic number
+        a1 = np.sum(1 / np.arange(1, n))
+        # calculate absolute value
+        theta_hat_w_abs = S / a1
+        # calculate value per base
+        theta_hat_w = theta_hat_w_abs / nsites if nsites > 0 else 0
+        return theta_hat_w
 
 def calc_taj(sequence_array, nsites, min_sites=3):
     """Manually calculate Tajima's D."""
