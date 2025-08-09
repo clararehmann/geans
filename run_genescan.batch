@@ -1,0 +1,44 @@
+#!/bin/bash
+#SBATCH --account=kernlab
+#SBATCH --job-name=genescan
+#SBATCH --output=slurm_logs/genescan_%j.out
+#SBATCH --error=slurm_logs/genescan_%j.err
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+#SBATCH --time=1:00:00
+#SBATCH --partition=kern,kerngpu,preempt
+
+gene=$1
+vcf=$2 #"/projects/kernlab/shared/vo_afun_release/v1.0/merged_vcf/afun_merged.vcf.gz"
+filter=$3 #"/projects/kernlab/shared/vo_afun_release/v1.0/site_filters/dt_20200416/vcf/funestus/merged_funestus_sitefilters.vcf.gz"
+annotation=$4 #"data/afun/"
+fasta=$5 #"data/afun/"
+proteinfasta=$6 #"data/afun/"
+output_dir=$7 #"out/afun/afun_gene_stats"
+data_dir=$8 #"data/afun/metadata"
+
+python scripts/wgs_stats.py \
+    --vcf $vcf \
+    --gene $gene \
+    --annotation $annotation \
+    --fasta $fasta \
+    --proteinfasta $proteinfasta \
+    --filter $filter \
+    --output "$output_dir\.txt"
+
+for S in $data_dir/*; do
+    SN=$(basename $S)
+    SN=${SN%.txt}  # Remove the .txt extension
+    samples=$(echo $(awk '{ print $1 }' $S))
+
+    python scripts/wgs_stats.py \
+        --vcf $vcf \
+        --gene $gene \
+        --annotation $annotation \
+        --fasta $fasta \
+        --proteinfasta $proteinfasta \
+        --filter $filter \
+        --samples $samples \
+        --output "$output_dir\_${SN}.txt"
+done
