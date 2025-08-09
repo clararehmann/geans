@@ -4,7 +4,7 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Get coding gene IDs from FASTA")
-    parser.add_argument("--input_file", help="Path to the input FASTA file")
+    parser.add_argument("--input_file", help="Path to the input FASTA file (protein coding)")
     parser.add_argument("--output_file", help="Path to save coding gene IDs to")
     return parser.parse_args()
 
