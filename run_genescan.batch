@@ -18,20 +18,7 @@ proteinfasta=$6 #"data/afun/"
 output_dir=$7 #"out/afun/afun_gene_stats"
 data_dir=$8 #"data/afun/metadata"
 
-python scripts/wgs_stats.py \
-    --vcf $vcf \
-    --gene $gene \
-    --annotation $annotation \
-    --fasta $fasta \
-    --proteinfasta $proteinfasta \
-    --filter $filter \
-    --output "$output_dir\.txt"
-
-for S in $data_dir/*; do
-    SN=$(basename $S)
-    SN=${SN%.txt}  # Remove the .txt extension
-    samples=$(echo $(awk '{ print $1 }' $S))
-
+if [ -f $filter ]; then
     python scripts/wgs_stats.py \
         --vcf $vcf \
         --gene $gene \
@@ -39,6 +26,44 @@ for S in $data_dir/*; do
         --fasta $fasta \
         --proteinfasta $proteinfasta \
         --filter $filter \
-        --samples $samples \
-        --output "$output_dir\_${SN}.txt"
-done
+        --output "$output_dir\.txt"
+
+    for S in $data_dir/*; do
+        SN=$(basename $S)
+        SN=${SN%.txt}  # Remove the .txt extension
+        samples=$(echo $(awk '{ print $1 }' $S))
+
+        python scripts/wgs_stats.py \
+            --vcf $vcf \
+            --gene $gene \
+            --annotation $annotation \
+            --fasta $fasta \
+            --proteinfasta $proteinfasta \
+            --filter $filter \
+            --samples $samples \
+            --output "$output_dir\_${SN}.txt"
+    done
+else
+        python scripts/wgs_stats.py \
+        --vcf $vcf \
+        --gene $gene \
+        --annotation $annotation \
+        --fasta $fasta \
+        --proteinfasta $proteinfasta \
+        --output "$output_dir\.txt"
+
+    for S in $data_dir/*; do
+        SN=$(basename $S)
+        SN=${SN%.txt}  # Remove the .txt extension
+        samples=$(echo $(awk '{ print $1 }' $S))
+
+        python scripts/wgs_stats.py \
+            --vcf $vcf \
+            --gene $gene \
+            --annotation $annotation \
+            --fasta $fasta \
+            --proteinfasta $proteinfasta \
+            --samples $samples \
+            --output "$output_dir\_${SN}.txt"
+    done
+fi

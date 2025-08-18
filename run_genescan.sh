@@ -8,59 +8,68 @@ declare -A mosqs=(
     ["gamb"]="Anopheles gambiae"
     ["colu"]="Anopheles coluzzii"
     ["arab"]="Anopheles arabiensis"
+    ["amin"]="Anopheles minimus"
     #["afun"]="Anopheles funestus"
-    #["amin"]="Anopheles minimus"
 )
 
 declare -A vcfs=(
     ["gamb"]="/projects/kernlab/shared/Ag3.0/vcf/unphased_vcf/gamb/ag1000g.agam_n1470.merged_allsites.vcf.gz"
     ["colu"]="/projects/kernlab/shared/Ag3.0/vcf/unphased_vcf/colu/ag1000g.colu_n507.merged_allsites.vcf.gz"
     ["arab"]="/projects/kernlab/shared/Ag3.0/vcf/unphased_vcf/arab/ag1000g.arab_n368.merged_allsites.vcf.gz"
+    ["amin"]="/projects/kernlab/shared/vo_amin_release/v1/merged_vcf/amin_merged.vcf.gz"
 )
 
 declare -A filters=(
     ["gamb"]="/projects/kernlab/shared/Ag3.0/vcf/unphased_vcf/gamb/ag1000g.agam_n1470.merged_variants.sitefilt.vcf.gz"
     ["colu"]="/projects/kernlab/shared/Ag3.0/vcf/unphased_vcf/gamb/ag1000g.agam_n1470.merged_variants.sitefilt.vcf.gz"
     ["arab"]="data/arab/filters/merged_arab_sitefilters.vcf.gz"
+    ["amin"]=None
 )
 
 declare -A annotations=(
     ["gamb"]="data/gamb/VectorBase-68_AgambiaePest.db"
     ["colu"]="data/gamb/VectorBase-68_AgambiaePest.db"
     ["arab"]="data/gamb/VectorBase-68_AgambiaePest.db"
+    ["amin"]="data/amin/VectorBase-68_AminimusMINIMUS1.db"
 )
 
 declare -A fastas=(
     ["gamb"]="data/gamb/VectorBase-68_AgambiaePEST_Genome.fasta"
     ["colu"]="data/gamb/VectorBase-68_AgambiaePEST_Genome.fasta"
     ["arab"]="data/gamb/VectorBase-68_AgambiaePEST_Genome.fasta"
+    ["amin"]="data/amin/VectorBase-68_AminimusMINIMUS1_Genome.fasta"
 )
 
 declare -A proteinfastas=(
     ["gamb"]="data/gamb/VectorBase-68_AgambiaePEST_AnnotatedProteins.fasta"
     ["colu"]="data/gamb/VectorBase-68_AgambiaePEST_AnnotatedProteins.fasta"
     ["arab"]="data/gamb/VectorBase-68_AgambiaePEST_AnnotatedProteins.fasta"
+    ["amin"]="data/amin/VectorBase-68_AminimusMINIMUS1_AnnotatedProteins.fasta"
 )
 
 declare -A outputs=(
     ["gamb"]="out/gamb/ag_gene_stats"
     ["colu"]="out/colu/colu_gene_stats"
     ["arab"]="out/arab/arab_gene_stats"
+    ["amin"]="out/amin/amin_gene_stats"
 )
 
 declare -A metadatas=(
     ["gamb"]="data/gamb/metadata"
     ["colu"]="data/colu/metadata"
     ["arab"]="data/arab/metadata"
+    ["amin"]="data/amin/metadata"
 )
 
 declare -A genes=(
     ["gamb"]="data/gamb/VectorBase-68_AgambiaePEST_ProteinList.txt"
     ["colu"]="data/gamb/VectorBase-68_AgambiaePEST_ProteinList.txt"
     ["arab"]="data/gamb/VectorBase-68_AgambiaePEST_ProteinList.txt"
+    ["amin"]="data/amin/VectorBase-68_AminimusMINIMUS1_ProteinList.txt"
 )
 
 for m in "${!mosqs[@]}"; do
+    echo $m
     if [ ! -d "out/${m}" ]; then
         genes=${genes[$m]}
         # initialize output directory and headers
@@ -76,7 +85,15 @@ for m in "${!mosqs[@]}"; do
         done
         for gene in $(cat $genes); do
             echo $gene
-            #sbatch run_genescan.batch $gene ${mosqs[$m]}
+            # vcf, site filter, annotation db, genome fasta, protein fasta, output base, metadata dir
+            sbatch run_genescan.batch $gene \
+                ${vcfs[$m]} \
+                ${filters[$m]} \
+                ${annotations[$m]} \
+                ${fastas[$m]} \
+                ${proteinfastas[$m]} \
+                ${outputs[$m]} \
+                ${metadatas[$m]}
         done
     fi
 done
