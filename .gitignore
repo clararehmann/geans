@@ -70,3 +70,5 @@ Thumbs.db
 # *.tsv
 # *.csv
 # *.txt
+GeneByLocusTag_Summary.txt
+.gitignore
