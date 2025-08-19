@@ -163,6 +163,7 @@ class Gene:
                 print(f"Fetching coding sequence for transcript {transcript.id}")
                 coding_seq = self.fetch_coding_sequence(transcript, annotation, fasta)
                 self.transcripts[transcript.id] = coding_seq
+            coding_seq = self.transcripts[transcript.id]
             cds_seq, cds_seq_array = get_nucleotide_sequences(callset, coding_seq)
             wt_AA_seq, aa_array = get_aa_sequences(cds_seq_array, cds_seq, ID=transcript.id, fasta_check=protein_fasta)
             sitesval = mean_ss_sites(cds_seq_array, wt_AA_seq)
