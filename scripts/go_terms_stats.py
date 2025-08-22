@@ -1,10 +1,12 @@
 import pandas as pd,  numpy as np
 import os, pickle
 from goatools import obo_parser
+from goatools.godag.go_tasks import get_go2parents, get_go2children
 
 gopath='/home/crehmann/vectorcomp/data/go-basic.obo' # path to GO OBO file
 statpath='/home/crehmann/vectorcomp/out/gamb_colu_arab_gene_stats_wide_GO_IDs.txt' # path to gene stats file
 savepath='/home/crehmann/vectorcomp/out/gamb_colu_arab'
+
 
 def updatedict(goID, goDAG, goDICT, agSLICE):
     transcript_ID = agSLICE['Transcript']
@@ -88,10 +90,75 @@ def get_stats(goDICT, goTERM):
             #gene_stats_mean = np.nanmean(gene_stats_array, axis=0)
             return gene_stats_array
 
+def getparents(gterm, go2parents_isa):
+    return go2parents_isa.get(gterm, [])
+
+def getchildren(gterm, go2children_isa):
+    return go2children_isa.get(gterm, [])
+
+def stackparents(gterm, goparents):
+    parents = getparents(gterm, goparents)
+    stacked = []
+    stacked.extend(f"{p};{gterm}" for p in parents)
+    while parents:
+        stacked.extend(f"{p};{parent}" for parent in parents for p in getparents(parent, goparents))
+        parents = [p for parent in parents for p in getparents(parent, goparents)]
+    return stacked
+
+def stackchildren(gterm, gochildren):
+    children = getchildren(gterm, gochildren)
+    stacked = []
+    stacked.extend(f"{gterm};{c}" for c in children)
+    while children:
+        stacked.extend(f"{c};{child}" for c in children for child in getchildren(c, gochildren))
+        children = [child for c in children for child in getchildren(c, gochildren)]
+    return stacked
+
+def go_edge_matrix(goDICT, goDAG, genedf, genedfcol, goparents, gochildren):
+    """
+    Create a GO edge matrix from the GO dictionary and gene DataFrame.
+    Rows represent (parent, child) relationships present for a given gene,
+    columns represent GO terms.
+
+    Parameters:
+    goDICT (dict): Dictionary containing GO terms and their relationships.
+    goDAG (GODag): GO Directed Acyclic Graph.
+    genedf (DataFrame): DataFrame containing gene information.
+    genedfcol (str): Column name in genedf containing GO terms.
+    """
+    GENES = genedf['Gene'].unique()
+    # for each gene, construct a list of (parent, child) relationships both up and down the GO hierarchy
+    edgedict = {}
+    for gene in GENES:
+        try: gene_go_terms = genedf[genedf['Gene'] == gene][genedfcol].dropna().unique()[0].split(';')
+        except IndexError: continue
+        for go_term in gene_go_terms:
+            if go_term in goDICT:
+                relationships = stackparents(go_term, goparents) + stackchildren(go_term, gochildren)
+                if edgedict.get(gene) is None:
+                    edgedict[gene] = relationships
+                else:
+                    edgedict[gene] = edgedict.get(gene, []) + relationships
+    # create a list of unique edges
+    edges = np.unique(sum([i for i in edgedict.values()], []))
+    # initialize an edge table with zeros
+    edgetable = np.zeros((len(edges), len(edgedict.keys())), dtype=int)
+    # fill the edge table with ones where edges are present
+    for gene, relationships in edgedict.items():
+        for edge in relationships:
+            if edge in edges:
+                edgetable[edges.tolist().index(edge), list(edgedict.keys()).index(gene)] = 1
+    return edges, edgetable, edgedict
+
 
 def main():
     # Load GO OBO file
     goDAG = obo_parser.GODag(gopath)
+    # set up relationships for building GO DAG
+    # optional_relationships = {'is_a', 'part_of', 'regulates', 'posit...
+    optional_relationships = set()
+    go2parents_isa = get_go2parents(goDAG, optional_relationships)
+    go2children_isa = get_go2children(goDAG, optional_relationships)
     # Load gene statistics data
     ag = pd.read_csv(statpath, sep='\t')
     print(ag.head())
@@ -100,12 +167,13 @@ def main():
     #    pickle.dump(goDICT, f)
     #    print(f'Saved GO terms statistics to {savepath}_GOterms_stats.pkl')
     
-    print(goDICT['Component'])  # Print the keys of the GO dictionary to verify structure
+    #print(goDICT['Component'])  # Print the keys of the GO dictionary to verify structure
 
 
     # create array of gene statistics
     for goTYPE in goDICT.keys():
         # Collect all data for this GO type
+        """
         all_data = []
         
         # Extract values from the GO dictionary
@@ -127,16 +195,22 @@ def main():
         print(f'Converting statistics to DataFrame for {goTYPE} terms...')
         df = pd.DataFrame(all_data)
         print(f'DataFrame shape: {df.shape}')
-        print(df.head())
         
         # Add level and depth for each GO term
         df['Level'] = df['GO_ID'].apply(lambda x: goDAG[x].level if x in goDAG else None)
         df['Depth'] = df['GO_ID'].apply(lambda x: goDAG[x].depth if x in goDAG else None)
         
         # Save to file
-        df.to_csv(f'{savepath}_{goTYPE}_terms_stats.csv', sep='\t', index=False)
-        print(f'Saved {goTYPE} terms statistics to {savepath}_{goTYPE}_terms_stats.csv')
+        df.to_csv(f'{savepath}_{goTYPE}_terms_stats.txt', sep='\t', index=False)
+        print(f'Saved {goTYPE} terms statistics to {savepath}_{goTYPE}_terms_stats.txt')
+        """
 
+        goterms = goDICT.get(goTYPE, {})
+        print(f'Creating GO edge matrix for {goTYPE} terms...')
+        edges, edgetable, edgedict = go_edge_matrix(goterms, goDAG, ag, f'Curated GO {goTYPE.capitalize()} IDs', go2parents_isa, go2children_isa)
+        df = pd.DataFrame(edgetable, index=edges, columns=edgedict.keys())
+        df.to_csv(f'{savepath}_{goTYPE}_edge_matrix.txt', sep='\t')
+        print(f'Saved {goTYPE} edge matrix to {savepath}_{goTYPE}_edge_matrix.txt')
 
 if __name__ == "__main__":
     main()
