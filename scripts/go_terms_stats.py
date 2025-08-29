@@ -36,9 +36,9 @@ def build_go_dict(goDAG, ag):
 
     ivals = range(len(ag))
     for i in ivals: 
-        compIDs = np.nan if isinstance(ag.iloc[i]['Computed GO Component IDs'], float) else ag.iloc[i]['Computed GO Component IDs'].split(';')
-        funcIDs = np.nan if isinstance(ag.iloc[i]['Computed GO Function IDs'], float) else ag.iloc[i]['Computed GO Function IDs'].split(';')
-        procIDs = np.nan if isinstance(ag.iloc[i]['Computed GO Process IDs'], float) else ag.iloc[i]['Computed GO Process IDs'].split(';')
+        compIDs = np.nan if isinstance(ag.iloc[i]['Curated GO Component IDs'], float) else ag.iloc[i]['Curated GO Component IDs'].split(';')
+        funcIDs = np.nan if isinstance(ag.iloc[i]['Curated GO Function IDs'], float) else ag.iloc[i]['Curated GO Function IDs'].split(';')
+        procIDs = np.nan if isinstance(ag.iloc[i]['Curated GO Process IDs'], float) else ag.iloc[i]['Curated GO Process IDs'].split(';')
 
         if not isinstance(compIDs, float):
             jvals = range(len(compIDs))
