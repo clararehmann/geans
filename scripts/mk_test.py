@@ -300,6 +300,7 @@ def main():
     print(f"Synonymous fixed: {syn_fix}, Nonsynonymous fixed: {nonsyn_fix}")
     print(f"Synonymous polymorphic: {syn_poly}, Nonsynonymous polymorphic: {nonsyn_poly}")
     print(f"Alpha: {alpha}")
+    print(f"Omega: {nonsyn_fix/syn_fix if syn_fix > 0 else 'inf'}")
     print(f"Fisher's exact test p-value: {p}")
 
 if __name__ == "__main__":
