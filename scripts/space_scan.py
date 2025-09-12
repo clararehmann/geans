@@ -157,7 +157,14 @@ def get_variant_stats(gene, transcript, minlocs=3, savelocs=False):
                     'nsamples': Lnsamples}
     else:
         locstats = None
+    stats = zscore(pd.DataFrame(stats)).to_dict(orient='list')
     return stats, locstats
+
+def zscore(df):
+    df = df.sort_values(by=['frequency']).reset_index(drop=True)
+    zscore_func = lambda x: (x - x.mean()) / x.std()
+    df.insert(2, 'zscore_area', df.groupby(df.index // round(len(df) / 200))['area_km2'].transform(zscore_func)) # ~200 snps per bin
+    return df
 
 def main():
     args = parse_args()
