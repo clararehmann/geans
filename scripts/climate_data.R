@@ -1,7 +1,19 @@
 library(tidyverse)
 library(data.table)
 
-metadata <- 'data/gamb/metadata/merged_gamb_metadata.txt'
+### add precipitation and temperature data to metadata file
+### usage: Rscript scripts/climate_data.R <metadata file> <output file path>
+### (only works for Africa right now)
+### output columns: longitude, latitude, (longlat of sampling data)
+### time, (time variable, e.g. year or month)
+### precip_min, precip_max, precip_mean, precip_var, (precipitation statistics)
+### climatology_min, climatology_max, climatology_mean, climatology_var, (temperature statistics)
+### longitude_data, latitude_data (longlat of climate data)
+
+
+args = commandArgs(trailingOnly=TRUE)
+metadata <- args[1] # metadata file with longitude and latitude columns
+outpath <- args[2] # output file path
 precdata <- 'data/climate/gpcc-precipitation-1992-2022.csv'
 landdata <- 'data/climate/land_cover.csv'
 tempdata <- 'data/climate/tavg-climatology.csv'
@@ -56,4 +68,4 @@ for (i in 2:nrow(locs)) {
 }
 
 df = merge(pdf, tdf, by = c('longitude', 'latitude', 'time', 'longitude_data', 'latitude_data'))
-write.csv(df, 'data/climate/gamb_climate_summary.csv', row.names = FALSE)
+write.csv(df, outpath, row.names = FALSE)
