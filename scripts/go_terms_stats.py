@@ -1,12 +1,14 @@
 import pandas as pd,  numpy as np
-import os, pickle
+import os, pickle, argparse
 from goatools import obo_parser
 from goatools.godag.go_tasks import get_go2parents, get_go2children
 
-gopath='/home/crehmann/vectorcomp/data/go-basic.obo' # path to GO OBO file
-statpath='/home/crehmann/vectorcomp/out/gamb_colu_arab_gene_stats_wide_GO_IDs.txt' # path to gene stats file
-savepath='/home/crehmann/vectorcomp/out/gamb_colu_arab'
-
+def args_parse():
+    parser = argparse.ArgumentParser(description='Process GO terms and gene statistics.')
+    parser.add_argument('-g', '--gopath', type=str, help='Path to GO OBO file')
+    parser.add_argument('-s', '--statpath', type=str, help='Path to gene statistics file')
+    parser.add_argument('-o', '--outpath', type=str, help='Output path prefix for saving results')
+    return parser.parse_args()
 
 def updatedict(goID, goDAG, goDICT, agSLICE):
     transcript_ID = agSLICE['Transcript']
@@ -152,6 +154,8 @@ def go_edge_matrix(goDICT, goDAG, genedf, genedfcol, goparents, gochildren):
 
 
 def main():
+    args = args_parse()
+    gopath, statpath, savepath = args.gopath, args.statpath, args.outpath
     # Load GO OBO file
     goDAG = obo_parser.GODag(gopath)
     # set up relationships for building GO DAG
@@ -173,7 +177,7 @@ def main():
     # create array of gene statistics
     for goTYPE in goDICT.keys():
         # Collect all data for this GO type
-        """
+        
         all_data = []
         
         # Extract values from the GO dictionary
@@ -203,7 +207,7 @@ def main():
         # Save to file
         df.to_csv(f'{savepath}_{goTYPE}_terms_stats.txt', sep='\t', index=False)
         print(f'Saved {goTYPE} terms statistics to {savepath}_{goTYPE}_terms_stats.txt')
-        """
+        
 
         goterms = goDICT.get(goTYPE, {})
         print(f'Creating GO edge matrix for {goTYPE} terms...')
