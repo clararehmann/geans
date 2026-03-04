@@ -1,88 +1,223 @@
-# Population genetics comparison of Anopheles malaria vectors
+# geans: gene-based population genetics statistics
 
-## Basic script usage:
+`geans` calculates per-gene population genetics statistics ( nucleotide diversity (π), Watterson's θ, Tajima's D, and Weir-Cockerham Fst) from a VCF file.
+Statistics are calculated for the whole gene, the coding sequence, the amino acid sequence, synonymous sites, and nonsynonymous sites. It can be used as a Python module or run directly from the command line.
 
-The `wgs_stats.py` script calculates pi (nucleotide diversity), theta hat (Watterson's estimator), and Tajima's D
-for a given gene, considering:
-- the entire gene
-- the coding sequence
-- the amino acid sequence
-- silent sites in the coding sequence
-- nonsynonymous sites in the coding sequence
+---
 
-The script requires a gene ID, a VCF file, an annotation in `.db` format (which can be created using `parse_gff.py`), and a genome-level FASTA file. 
+## Installation
 
-__Example execution:__
+**Prerequisites**: Python ≥ 3.9, a (preferably bgzipped and tabix-indexed) VCF, a gffutils annotation database (which can be generated using `utilityscripts/parse_gff.py`), and a reference genome FASTA.
 
-    python wgs_stats.py --gene <gene_name> \
-                        --vcf <vcf_path>\
-                        --annotation <annotation.db path> \
-                        --fasta <fasta path> \
+```bash
+git clone https://github.com/clararehmann/geans
+cd geans
+uv pip install -e .
+```
 
-__Example printed output:__
+---
 
-    gene-wide pi: 0.026461257859243054 cds_pi: 0.004484740740526833 aa_pi: 0.0029415135832686753 ss_pi: 0.009924957573901851 ns_pi: 0.0030197803483858632
-    gene-wide theta: 0.11677863181375378 cds_theta: 0.022045760862240794 aa_theta: 0.016981474980921216 ss_theta: 0.03224173578054607 ns_theta: 0.020261158990112015
-    gene-wide Tajima's D: -2.1546476407943578 cds_D: -2.215106564978898 aa_D: -2.2707703885891455 ss_D: -1.8660249387103294 ns_D: -2.3478453225818217
+## Command-line usage
 
-Tab-formatted output can be saved to a file using the `--output` flag, which will either create a 
-file if one does not exist or append statistics to an existing file. The output columns are:
+```bash
+geans --id GENE_ID \
+      --vcf variants.vcf.gz \
+      --annotation genome.db \
+      --fasta genome.fa
+```
 
-    Gene	Chromosome	Transcript	gene_pi	cds_pi	aa_pi	ss_pi	ns_pi	gene_theta	cds_theta	aa_theta	ss_theta	ns_theta	gene_d	cds_d	aa_d	ss_d	ns_d	
+### Arguments
 
-## Using the `Gene` class:
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--id` | yes | Gene identifier (must match the annotation database) |
+| `--vcf` | yes | Path to bgzipped, tabix-indexed VCF |
+| `--annotation` | yes | Path to gffutils annotation database |
+| `--fasta` | yes | Path to reference genome FASTA |
+| `--metadata` | no | Tab-separated sample metadata file (must contain a `sample_id` column) |
+| `--filter` | no | Filter VCF; only sites present in this file are retained |
+| `--protein-fasta` | no | Protein FASTA for amino acid sequence validation |
+| `--stats` | no | Statistics to calculate (default: `pi theta tajD Fst`). Choices: `pi theta tajD Fst pairwiseFst` |
+| `--longest` | no | Only analyze the longest transcript (flag; default: all transcripts) |
+| `--output` | no | Write statistics to this tab-separated file |
 
-Further information about nucleotide and genetic variation is contained within the `Gene` class
-and can be accessed in the `.transcripts` object after using `.fetch_variation()`.
+### Examples
 
-    >>> from wgs_stats import Gene
-    >>> GENE = Gene(name="AGAP007036")
-    >>> GENE.fetch_gene_coordinates(annotation)
-    ('AgamP4_2L', 41271509, 41272901)
-    >>> GENE.fetch_variation(
-    ...     vcf_file=vcf_file.replace('CHROMOSOME', GENE.chromosome.split('_')[-1]),
-    ...     annotation=annotation,
-    ...     fasta=fasta
-    ... )
-    Fetching transcripts for gene AGAP007036 on chromosome 2L
-    Fetching coding sequence for transcript AGAP007036-RA
+```bash
+# Minimal — calculate pi, theta, tajD, Fst for all transcripts
+geans --id AGAP002866 \
+      --vcf ag1000g.vcf.gz \
+      --annotation VectorBase.db \
+      --fasta AgamP4.fa \
+      --metadata samples.txt
 
+# Calculate only pi and Tajima's D for the longest transcript
+geans --id AGAP002866 \
+      --vcf ag1000g.vcf.gz \
+      --annotation VectorBase.db \
+      --fasta AgamP4.fa \
+      --metadata samples.txt \
+      --stats pi tajD \
+      --longest
 
-    >>> for k, v in GENE.transcripts['AGAP007036-RA'].items():
-    ...     print(k, type(v))
-    ... 
-    id <class 'str'> # ID of transcript
-    cds_id <class 'list'> # list of coding sequence IDs
-    cds_start <class 'list'> # list of coding sequence start positions
-    cds_end <class 'list'> # list of coding sequence stop positions
-    cds_seq <class 'list'> # list of strings of coding sequences as nucleotides
-    strand <class 'str'> # + or -
-    sequences <class 'dict'> # dictionary of sequence variation data
-    mean_nssites <class 'numpy.float64'> # mean number of nonsynonymous sites across all coding sequences
-    mean_sssites <class 'numpy.float64'> # # mean number of synonymous sites across all coding sequences
+# Save output to a TSV
+geans --id AGAP002866 \
+      --vcf ag1000g.vcf.gz \
+      --annotation VectorBase.db \
+      --fasta AgamP4.fa \
+      --metadata samples.txt \
+      --output results.txt
+```
 
-Information about loaded genotype variants can be accessed in the `.transcripts['<TRANSCRIPT_ID>']['sequences']` dictionary.
-By default, all coding transcripts are loaded into `.transcripts`. (TODO: add method to just load one transcript)
+### Output
 
-    >>> for k, v in GENE.transcripts['AGAP007036-RA']['sequences'].items():
-    ...     print(k, type(v))
-    ... 
-    genotype_array <class 'allel.model.ndarray.GenotypeArray'> # scikit-allel GenotypeArray of all data
-    positions <class 'numpy.ndarray'> # array of variant positions (genome-based)
-    wt_nt_seq <class 'numpy.ndarray'> # wild-type coding sequence (nucleotide)
-    wt_aa_seq <class 'numpy.ndarray'> # wild-type amino acid sequence
-    nt_seq_array <class 'numpy.ndarray'> # array of genotypes as coding sequence nucleotide variation 
-                                         # (second axis corresponds to sample locations in genotype_array)
-    aa_seq_array <class 'numpy.ndarray'> # array of genotypes as amino acid variation
-                                         # (second axis corresponds to sample locations in genotype_array)
-    synonymous_array <class 'numpy.ndarray'> # array of variant genotypes at synonymous sites
-    nonsynonymous_array <class 'numpy.ndarray'> # array of variant genotypes at nonsynonymous sites
+Statistics are printed to stdout as a formatted table per transcript. If `--output` is given, a tab-separated file is written with one row per transcript and columns:
 
-Statistics can be directly calculated on loaded genotypes using `.calculate_statistics('<TRANSCRIPT_ID>'):
+```
+Gene  Chromosome  Transcript  Length  GC_Content  pi_gene  pi_cds  pi_aa  pi_ss  pi_ns  theta_gene  ...
+```
 
-    ```
-    >>> GENE.calculate_statistics('AGAP007036-RA')
-    gene-wide pi: 0.0023784062791499727 cds_pi: 2.639262834664575e-06 aa_pi: 3.571741754680041e-06 ss_pi: 0 ns_pi: 3.571741754680041e-06
-    gene-wide theta: 0.11677863181375378 cds_theta: 9.073708765637434e-05 aa_theta: 0.00012279544137237239 ss_theta: 0 ns_theta: 0.00012279544137237239
-    gene-wide Tajima's D: -0.9842000160717197 cds_D: nan aa_D: nan ss_D: 0 ns_D: nan
-    ```
+Pairwise Fst (if calculated) is written to a separate file named `<output>_<transcriptID>_pairwiseFst.txt` where each row and column 
+represents the Fst between index locations.
+
+---
+
+## Python API
+
+### Basic workflow
+
+```python
+import geans
+
+gene = geans.Gene(
+    'AGAP002866',
+    vcf='ag1000g.vcf.gz',
+    annotation='VectorBase.db',
+    fasta='AgamP4.fa',
+    metadata='samples.txt',
+)
+
+gene.fetch_gene_coordinates()
+gene.fetch_gene_transcripts()
+gene.fetch_variation()
+gene.calculate_statistics()
+
+print(gene)
+```
+
+```
+Gene: AGAP002866
+  Location: AgamP4_2R:28494017-28495645  |  Length: 1629 bp  |  GC: 0.412
+  Transcripts: 1 (AGAP002866-RA)
+  Statistics: pi, theta, tajD, Fst [pairwiseFst disabled]
+```
+
+### Accessing transcripts and statistics
+
+```python
+# Count transcripts
+len(gene)
+
+# Iterate over transcripts
+for tx in gene:
+    print(tx)
+    print(tx.statistics)     # pandas DataFrame
+
+# Index by transcript ID
+tx = gene['AGAP002866-RA']
+
+# Direct DataFrame indexing
+tx.statistics.loc['pi', 'cds']    # CDS-level nucleotide diversity
+tx.statistics.loc['tajD']         # Full Tajima's D row across all levels
+```
+
+### Incremental statistics
+
+Statistics are preserved across calls, so you can add a new statistic without recomputing existing ones:
+
+```python
+gene.calculate_statistics()               # computes pi, theta, tajD, Fst
+gene.calculate_statistics(['pairwiseFst']) # adds pairwise Fst; pi/theta/tajD/Fst unchanged
+```
+
+### Only the longest transcript
+
+```python
+gene.fetch_gene_transcripts()
+gene.keep_longest_transcript()
+gene.fetch_variation()
+gene.calculate_statistics()
+```
+
+### Saving to file
+
+```python
+# Write header + first transcript
+gene.save_to_df('AGAP002866-RA', output_file='results.txt', append=False)
+
+# Append additional transcripts
+gene.save_to_df('AGAP002866-RB', output_file='results.txt', append=True)
+```
+
+### Controlling which statistics are calculated
+
+Pass a `statistics` dict at construction or a list to `calculate_statistics`:
+
+```python
+# At construction — only pi and theta
+gene = geans.Gene('AGAP002866', ..., statistics={'pi': True, 'theta': True, 'tajD': False, 'Fst': False})
+
+# Or selectively
+gene.calculate_statistics(['pi', 'theta'])
+```
+
+---
+
+## Statistics
+
+| Statistic | Description |
+|-----------|-------------|
+| `pi` | Nucleotide diversity — mean pairwise differences per site |
+| `theta` | Watterson's θ — diversity estimated from segregating sites |
+| `tajD` | Tajima's D — neutrality test statistic |
+| `Fst` | Weir-Cockerham Fst — genetic differentiation between sampling locations (requires metadata with coordinates) |
+| `pairwiseFst` | Hudson's pairwise Fst between all pairs of sampling locations (requires metadata with coordinates) |
+
+Each statistic is computed at five levels:
+
+| Level | Description |
+|-------|-------------|
+| `gene` | All variant sites within the gene region |
+| `cds` | Coding sequence sites only |
+| `aa` | Amino acid (protein) level |
+| `ss` | Synonymous sites |
+| `ns` | Nonsynonymous sites |
+
+---
+
+## Input requirements
+
+### VCF
+Chromosome names in the VCF must match those in the annotation database (the last `_`-delimited field is stripped when querying, e.g. `AgamP4_2R` → `2R`).
+
+### Annotation database
+A gffutils SQLite database built from a GFF3 file. Create one with:
+
+```bash
+python scripts/parse_gff.py --input_file genome.gff3 --output_file genome.db
+```
+
+### Metadata TSV
+Required for Fst calculations. Must contain a `sample_id` column matching sample IDs in the VCF. Geographic coordinates should be in `longitude`/`latitude` columns (or `x`/`y` for projected coordinates). If no coordinate columns are found, Fst is skipped silently.
+
+### Reference FASTA
+Standard indexed reference genome. Used to retrieve wild-type sequences for each transcript's coding sequence.
+
+---
+
+## Utility scripts
+
+| Script | Description |
+|--------|-------------|
+| `scripts/parse_gff.py` | Build a gffutils annotation database from a GFF3 file |
+| `scripts/get_codinggenes.py` | Extract a list of coding gene IDs from a protein FASTA |

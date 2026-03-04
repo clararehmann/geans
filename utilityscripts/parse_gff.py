@@ -1,6 +1,10 @@
 import gffutils
 import argparse
 
+"""
+Utility script to create a gffutils database from an input GFF file.
+"""
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Create GFF database from input GFF file")
     parser.add_argument("--input_file", help="Path to the input GFF file")

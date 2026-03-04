@@ -166,6 +166,14 @@ class Gene:
                 locs=self.locs,
             )
 
+    def keep_longest_transcript(self):
+        """Keep only the longest transcript for the gene, removing all others."""
+        if not self.transcripts:
+            print(f"No transcripts loaded for gene {self.name}. Cannot keep longest transcript.")
+            return
+        longest_tx_id = max(self.transcripts, key=lambda tid: self.transcripts[tid].cds_length)
+        self.transcripts = {longest_tx_id: self.transcripts[longest_tx_id]}
+
     def calculate_statistics(self, statistics=None):
         """Calculate statistics for one or all transcripts.
 
