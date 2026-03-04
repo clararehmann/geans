@@ -2,6 +2,11 @@ from Bio import SeqIO
 import numpy as np
 import argparse
 
+"""
+Utility script to extract coding gene IDs from a FASTA file containing protein sequences.
+"""
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Get coding gene IDs from FASTA")
     parser.add_argument("--input_file", help="Path to the input FASTA file (protein coding)")
