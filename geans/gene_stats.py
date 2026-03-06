@@ -408,7 +408,7 @@ class Variants:
                 'ns': calc_taj(ns_array, self.mean_nssites) if ns_array is not None else 0,
             }
         if stat_flags.get('Fst') and self.locs is not None:
-            if np.unique(self.locs, axis=0).shape[1] == 2:
+            if np.unique(self.locs, axis=0).shape[0] == 1:
                 warnings.warn("Only one sampling location. Returning NaN for Fst.")
                 self.statistics.loc['Fst'] = {
                     'gene': np.nan,

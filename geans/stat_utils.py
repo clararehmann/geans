@@ -97,7 +97,7 @@ def calc_fst_pairwise(gene, seqs):
     return fstmat
 
 
-def calc_fst_wc(gene, seqs, minsamples=5):
+def calc_fst_wc(gene, seqs, minsamples=2):
     """Calculate Weir and Cockerham's Fst using HDBSCAN-derived population clusters."""
     locs = gene.locs
     cl = HDBSCAN(min_cluster_size=minsamples, metric='haversine').fit_predict(np.radians(locs))
