@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import allel
 import pytest
+from sklearn.cluster import HDBSCAN
 from geans import Gene, Transcript, Variants
 from tests.conftest import GENE_ID, TRANSCRIPT, VCF, ANNOTATION, FASTA, METADATA
 
@@ -259,6 +260,29 @@ class TestCalculateStatistics:
         theta_skal = allel.watterson_theta(v.positions, v.gt_array.count_alleles())
         assert np.isclose(theta_calculated, theta_skal, rtol=1e-5), f"Calculated theta {theta_calculated} does not match scikit-allel Watterson's theta {theta_skal}"
 
+    def test_fst_matches_skal(self, gene_with_stats):
+        tx = gene_with_stats[TRANSCRIPT]
+        v = tx.variants
+        fst_calculated = float(tx.statistics.loc['Fst', 'gene'])
+        # group samples by population from metadata
+        locs = gene_with_stats.locs
+        cl = HDBSCAN(min_cluster_size=2, metric='haversine').fit_predict(np.radians(locs))
+        locs = locs[cl != -1]
+        cl = cl[cl != -1]
+        c_ = cl[0]
+        clinds = []
+        clind = [0]
+        for i in range(1, len(cl)):
+            if cl[i] == c_:
+                clind.append(i)
+            else:
+                clinds.append(clind)
+                clind = [i]
+                c_ = cl[i]
+        clinds.append(clind)
+        a, b, c = allel.weir_cockerham_fst(v.gt_array, clinds)
+        fst_skal = np.sum(a) / (np.sum(a) + np.sum(b) + np.sum(c))
+        assert np.isclose(fst_calculated, fst_skal, rtol=1e-5), f"Calculated Fst {fst_calculated} does not match scikit-allel Fst {fst_skal}"
 # ---------------------------------------------------------------------------
 # Statistics preservation across repeated calculate_statistics calls
 # ---------------------------------------------------------------------------
