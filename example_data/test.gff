@@ -1,0 +1,4 @@
+AgamP4_2L	VEuPathDB	protein_coding_gene	8375887	8376198	.	-	.	ID=AGAP005023;description=Histone H4 [Source:UniProtKB/TrEMBL%3BAcc:Q7PCX0];ebi_biotype=protein_coding
+AgamP4_2L	VEuPathDB	mRNA	8375887	8376198	.	-	.	ID=AGAP005023-RA;Parent=AGAP005023;description=Histone H4 [Source:UniProtKB/TrEMBL%3BAcc:Q7PCX0];gene_ebi_biotype=protein_coding
+AgamP4_2L	VEuPathDB	exon	8375887	8376198	.	-	.	ID=exon_AGAP005023-RA-E1;Parent=AGAP005023-RA;gene_id=AGAP005023
+AgamP4_2L	VEuPathDB	CDS	8375887	8376198	.	-	0	ID=AGAP005023-PA-CDS1;Parent=AGAP005023-RA;gene_id=AGAP005023;protein_source_id=AGAP005023-PA

@@ -15,6 +15,18 @@ cd geans
 uv pip install -e .
 ```
 
+An example VCF for *Anopheles gambiae* gene AGAP005023 with its associated filter, GFF file, and metadata are available in the `example_data` subdirectory. To run example tests, you will need to obtain the *Anopheles gambiae* reference genome FASTA:
+
+```bash
+wget -P example_data/ https://vectorbase.org/a/service/raw-files/release-68/AgambiaePEST/fasta/data/VectorBase-68_AgambiaePEST_Genome.fasta
+```
+
+and construct a gffutils database from the GFF file using the provided utility script:
+
+```bash
+python utilityscripts/parse_gff.py --input_file example_data/test.gff --output_file example_data/test.db
+```
+
 ---
 
 ## Command-line usage
@@ -45,14 +57,14 @@ geans --id GENE_ID \
 
 ```bash
 # Minimal — calculate pi, theta, tajD, Fst for all transcripts
-geans --id AGAP002866 \
+geans --id AGAP005023 \
       --vcf ag1000g.vcf.gz \
       --annotation VectorBase.db \
       --fasta AgamP4.fa \
       --metadata samples.txt
 
 # Calculate only pi and Tajima's D for the longest transcript
-geans --id AGAP002866 \
+geans --id AGAP005023 \
       --vcf ag1000g.vcf.gz \
       --annotation VectorBase.db \
       --fasta AgamP4.fa \
@@ -61,7 +73,7 @@ geans --id AGAP002866 \
       --longest
 
 # Save output to a TSV
-geans --id AGAP002866 \
+geans --id AGAP005023 \
       --vcf ag1000g.vcf.gz \
       --annotation VectorBase.db \
       --fasta AgamP4.fa \
@@ -90,7 +102,7 @@ represents the Fst between index locations.
 import geans
 
 gene = geans.Gene(
-    'AGAP002866',
+    'AGAP005023',
     vcf='ag1000g.vcf.gz',
     annotation='VectorBase.db',
     fasta='AgamP4.fa',
@@ -106,9 +118,9 @@ print(gene)
 ```
 
 ```
-Gene: AGAP002866
-  Location: AgamP4_2R:28494017-28495645  |  Length: 1629 bp  |  GC: 0.412
-  Transcripts: 1 (AGAP002866-RA)
+Gene: AGAP005023
+  Location: AgamP4_2L:8375887-8376198  |  Length: 312 bp  |  GC: 0.596
+  Transcripts: 1 (AGAP005023-RA)
   Statistics: pi, theta, tajD, Fst [pairwiseFst disabled]
 ```
 
@@ -124,7 +136,7 @@ for tx in gene:
     print(tx.statistics)     # pandas DataFrame
 
 # Index by transcript ID
-tx = gene['AGAP002866-RA']
+tx = gene['AGAP005023-RA']
 
 # Direct DataFrame indexing
 tx.statistics.loc['pi', 'cds']    # CDS-level nucleotide diversity
@@ -153,10 +165,11 @@ gene.calculate_statistics()
 
 ```python
 # Write header + first transcript
-gene.save_to_df('AGAP002866-RA', output_file='results.txt', append=False)
+gene.save_to_df('AGAP005023-RA', output_file='results.txt', append=False)
 
-# Append additional transcripts
-gene.save_to_df('AGAP002866-RB', output_file='results.txt', append=True)
+# Append additional transcripts (if they exist)
+# this code won't run because AGAP005023 only has one transcript
+gene.save_to_df('AGAP005023-RB', output_file='results.txt', append=True)
 ```
 
 ### Controlling which statistics are calculated
@@ -165,7 +178,7 @@ Pass a `statistics` dict at construction or a list to `calculate_statistics`:
 
 ```python
 # At construction — only pi and theta
-gene = geans.Gene('AGAP002866', ..., statistics={'pi': True, 'theta': True, 'tajD': False, 'Fst': False})
+gene = geans.Gene('AGAP005023', ..., statistics={'pi': True, 'theta': True, 'tajD': False, 'Fst': False})
 
 # Or selectively
 gene.calculate_statistics(['pi', 'theta'])
@@ -198,7 +211,7 @@ Each statistic is computed at five levels:
 ## Input requirements
 
 ### VCF
-Chromosome names in the VCF must match those in the annotation database (the last `_`-delimited field is stripped when querying, e.g. `AgamP4_2R` → `2R`).
+Chromosome names in the VCF must match those in the annotation database (the last `_`-delimited field is stripped when querying, e.g. `AgamP4_2L` → `2L`).
 
 ### Annotation database
 A gffutils SQLite database built from a GFF3 file. Create one with:
