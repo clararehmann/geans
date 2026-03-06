@@ -57,9 +57,9 @@ class TestGeneInit:
 # ---------------------------------------------------------------------------
 
 class TestFetchGeneCoordinates:
-    def test_chromosome_contains_2r(self, gene_loaded):
+    def test_chromosome_contains_2L(self, gene_loaded):
         assert gene_loaded.chromosome is not None
-        assert '2R' in gene_loaded.chromosome
+        assert '2L' in gene_loaded.chromosome
 
     def test_start_end_set(self, gene_loaded):
         assert gene_loaded.start is not None
@@ -77,7 +77,7 @@ class TestFetchGeneCoordinates:
     def test_returns_chrom_start_end_tuple(self):
         g = Gene(GENE_ID, vcf=VCF, annotation=ANNOTATION, fasta=FASTA)
         chrom, start, end = g.fetch_gene_coordinates()
-        assert '2R' in chrom
+        assert '2L' in chrom
         assert start < end
 
 
@@ -407,7 +407,7 @@ class TestRepr:
         assert GENE_ID in repr(gene_with_stats)
 
     def test_gene_repr_contains_chromosome(self, gene_with_stats):
-        assert '2R' in repr(gene_with_stats)
+        assert '2L' in repr(gene_with_stats)
 
     def test_transcript_repr_contains_id(self, gene_with_stats):
         tx = gene_with_stats[TRANSCRIPT]
